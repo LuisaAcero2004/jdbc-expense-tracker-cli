@@ -8,6 +8,19 @@
     <artifactId>jdbc-project-repository-expensesTracker</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.6.3</version>
+                <configuration>
+                    <mainClass>org.expenses.main.Main</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
     <properties>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
@@ -23,5 +36,7 @@
             <scope>compile</scope>
         </dependency>
     </dependencies>
+
+
 
 </project>
