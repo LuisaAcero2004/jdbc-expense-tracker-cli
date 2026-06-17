@@ -29,7 +29,7 @@ public class Expense {
     public void setId(Integer id){
         this.id = id;
     }
-
+    // some reason for User_id and not UserId?
     public void setUser_id(Integer user_id) {
         this.user_id = user_id;
     }

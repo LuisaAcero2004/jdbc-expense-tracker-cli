@@ -15,6 +15,7 @@ public class ExpenseRepositoryImpl implements ExpenseRepository {
         if(expense.getId() == null){
             sql = "INSERT INTO expenses (user_id, date, description, amount) VALUES (?, ?, ?, ?)";
         }else{
+            // Should not this been other method? for update?
             sql = "UPDATE expenses SET date = ?, description = ?, amount = ? WHERE id = ?";
         }
 

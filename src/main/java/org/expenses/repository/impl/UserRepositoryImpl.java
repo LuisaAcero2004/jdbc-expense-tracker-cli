@@ -98,6 +98,7 @@ public class UserRepositoryImpl implements UserRepository {
         return user;
     }
 
+    // Why this is not used ? 
     private User createUser(ResultSet resultSet) throws SQLException {
         return new User(
                 resultSet.getInt("id"),
