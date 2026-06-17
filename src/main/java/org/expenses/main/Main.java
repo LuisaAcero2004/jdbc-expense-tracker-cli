@@ -9,33 +9,59 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.format.TextStyle;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 public class Main {
-    private static final String EXPENSE_TRACKER = "expense-tracker";
-    private static final String ACTION_ADD = "add";
-    private static final String ACTION_LIST = "list";
-    private static final String ACTION_SUMMARY = "summary";
-    private static final String ACTION_DELETE = "delete";
+    // this allow to extend the command list in the future and have an easier time managing them
+    private enum Command {
+        EXPENSE_TRACKER("expense-tracker"),
+        ADD("add"),
+        LIST("list"),
+        SUMMARY("summary"),
+        DELETE("delete"),
+        ADDUSER("add-user");
+
+        private final String value;
+
+        Command(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+
+        public static Command fromString(String text) {
+            for (Command cmd : Command.values()) {
+                if (cmd.value.equalsIgnoreCase(text)) {
+                    return cmd;
+                }
+            }
+            return null;
+        }
+    }
     public static void main(String[] args) {
 
-        UserRepositoryImpl userRepository = new UserRepositoryImpl();
+        UserRepositoryImpl userRepository = new UserRepositoryImpl()    ;
         ExpenseRepositoryImpl expenseRepository = new ExpenseRepositoryImpl();
 
-        if(args.length == 0 || !args[0].equalsIgnoreCase(EXPENSE_TRACKER)){
+        if(args.length == 0 || !args[0].equalsIgnoreCase(Command.EXPENSE_TRACKER.getValue())){
             System.out.println("Unrecognized command. Please use 'expense-tracker'");
             return;
         }
 
         String action = args[1];
 
-        switch (action){
-            case ACTION_ADD -> {
+        // You can use switch with enum values directly
+        switch (Command.fromString(action)){
+            case ADD -> {
                 String description = null;
                 String amount = null;
                 String userEmail = null;
 
+                // This kind of method are repited with some modification exist any implementation to cover all
                 for (int i = 0; i < args.length; i++) {
                     String descVal = getFlagValue("--description", args, i);
                     if (descVal != null) description = descVal;
@@ -53,6 +79,7 @@ public class Main {
                     return;
                 }
 
+                //this is the only validation needed? negative amounts?
                 if (amount == null){
                     System.out.println("Amount cannot be null");
                     return;
@@ -68,9 +95,13 @@ public class Main {
                 } catch (NumberFormatException e) {
                     System.out.println("Invalid amount format");
                 }
+                // catch any other exception
+                catch (Exception e) {
+                    System.out.println("Error saving expense: " + e.getMessage());
+                }
             }
 
-            case ACTION_DELETE -> {
+            case DELETE -> {
                 String idString = null;
                 String userEmail = null;
 
@@ -111,12 +142,15 @@ public class Main {
                     System.out.println("You do not have permission to delete this expense");
                     return;
                 }
-
-                expenseRepository.deleteById(id);
-
+                // Something bad could happen here
+                try {
+                    expenseRepository.deleteById(id);
+                } catch (Exception e) {
+                    System.out.println("Error deleting expense: " + e.getMessage());
+                }
             }
 
-            case ACTION_LIST -> {
+            case LIST -> {
                 String userEmail = null;
 
                 for (int i = 0; i < args.length; i++) {
@@ -133,6 +167,7 @@ public class Main {
 
                 List<Expense> expenses = expenseRepository.listAllByUser(user.getId());
                 System.out.printf("%-5s %-12s %-20s %-10s%n", "ID", "Date", "Description", "Amount");
+                // Nice implementation 
                 expenses.forEach(e -> {
                     System.out.printf("%-5d %-12s %-20s $%s%n",
                             e.getId(), e.getDate(), e.getDescription(), e.getAmount());
@@ -140,7 +175,7 @@ public class Main {
 
             }
 
-            case ACTION_SUMMARY -> {
+            case SUMMARY -> {
                 String userEmail = null;
                 String monthString = null;
 
@@ -162,12 +197,12 @@ public class Main {
 
                 if(monthString == null){
                     List<Expense> expenses = expenseRepository.listAllByUser(user.getId());
-
-                    List<BigDecimal> amounts = expenses.stream()
+                    // You can use reduce() to sum the amounts
+                    BigDecimal total = expenses.stream()
                             .map(Expense::getAmount)
-                            .toList();
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                    System.out.println("Total expenses: $" + amounts.stream().reduce(BigDecimal.ZERO,BigDecimal::add));
+                    System.out.println("Total expenses: $" + total);
 
                 }else {
                     Integer month = null;
@@ -178,16 +213,39 @@ public class Main {
                         return;
                     }
                     List<Expense> expenses = expenseRepository.listByMonthAndUser(user.getId(), month);
-
-                    List<BigDecimal> amounts = expenses.stream()
+                    // You can use reduce() to sum the amounts in just one operation
+                    BigDecimal total = expenses.stream()
                             .map(Expense::getAmount)
-                            .toList();
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                     System.out.println("Total expenses for " +
+                            // nice formatting
                             Month.of(month).getDisplayName(TextStyle.FULL, Locale.ENGLISH) +
-                            ": $" + amounts.stream().reduce(BigDecimal.ZERO,BigDecimal::add));
+                            ": $" + total);
                 }
 
+            }
+            // you have already the repository for users so it is easy to implement this command
+            case ADDUSER -> {
+                String name = null;
+                String email = null;
+
+                for (int i = 0; i < args.length; i++) {
+                    String nameVal = getFlagValue("--name", args, i);
+                    if (nameVal != null) name = nameVal;
+
+                    String emailVal = getFlagValue("--email", args, i);
+                    if (emailVal != null) email = emailVal;
+                }
+
+                if (name == null || email == null) {
+                    System.out.println("Name and email are required");
+                    return;
+                }
+
+                User user = new User(name, email);
+                userRepository.save(user);
+                System.out.println("User added successfully");
             }
 
             default -> System.out.println("Invalid Action");
